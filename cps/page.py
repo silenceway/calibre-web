@@ -30,8 +30,8 @@ def get_page(file):
 
             return render_title_template('page.html', body=body, title=page.title, page=page.name)
         else:
-            log.error("'%s' was accessed but file doesn't exists." % file)
+            log.debug("'%s' was accessed but file doesn't exists." % file)
             abort(404)
     else:
-        log.error("'%s' was accessed but is not enabled or it's not in database." % file)
+        log.debug("'%s' was accessed but is not enabled or it's not in database." % file)
         abort(404)
