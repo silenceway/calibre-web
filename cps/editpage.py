@@ -1,3 +1,4 @@
+import os
 import flask
 from flask import Flask, abort, request
 from functools import wraps
@@ -6,6 +7,7 @@ from flask_login import current_user, login_required
 
 from .render_template import render_title_template
 from . import logger, config, ub
+from .constants import CONFIG_DIR as _CONFIG_DIR
 
 log = logger.create()
 
@@ -34,7 +36,7 @@ def edit_page(file):
     doc = ""
     title = ""
     name = ""
-    icon = ""
+    icon = "file"
     is_enabled = True
     order = 0
     position = "0"
@@ -74,10 +76,16 @@ def edit_page(file):
 
         if (file == "new"):
             file = str(new_page.id)
-        dir_config_path = Path(config.config_calibre_dir)
+        dir_config_path = os.path.join(_CONFIG_DIR, 'pages')
         file_name = Path(name + '.md')
         file_path = dir_config_path / file_name
-        try: 
+        is_path = os.path.exists(dir_config_path)
+        if not is_path:
+            try:
+                os.makedirs(dir_config_path)
+            except Exception as ex:
+                log.error(ex)
+        try:
             with open(file_path, 'w') as f:
                 f.write(content)
                 f.close()
@@ -85,7 +93,7 @@ def edit_page(file):
             log.error(ex)
 
     if file != "new":
-        dir_config_path = Path(config.config_calibre_dir)
+        dir_config_path = os.path.join(_CONFIG_DIR, 'pages')
         file_name = Path(name + '.md')
         file_path = dir_config_path / file_name
         if file_path.is_file():

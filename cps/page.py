@@ -1,3 +1,4 @@
+import os
 import flask
 import markdown
 from flask import abort
@@ -6,6 +7,7 @@ from flask_babel import gettext as _
 
 from . import logger, config, ub
 from .render_template import render_title_template
+from .constants import CONFIG_DIR as _CONFIG_DIR
 
 page = flask.Blueprint('page', __name__)
 
@@ -19,7 +21,7 @@ def get_page(file):
         .first()
 
     if page:
-        dir_config_path = Path(config.config_calibre_dir)
+        dir_config_path = os.path.join(_CONFIG_DIR, 'pages')
         file_name = Path(file + '.md')
         file_path = dir_config_path / file_name
 
