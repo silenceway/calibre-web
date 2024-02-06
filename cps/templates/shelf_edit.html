@@ -1,4 +1,8 @@
 {% extends "layout.html" %}
+{% block header %}
+<link href="{{ url_for('static', filename='css/libs/bootstrap-select.min.css') }}" rel="stylesheet" >
+{% endblock %}
+
 {% block body %}
 <div class="discover">
   <h1>{{title}}</h1>
@@ -14,6 +18,30 @@
           <input type="checkbox" name="is_public" {% if shelf.is_public == 1 %}checked{% endif %}> {{_('Share with Everyone')}}
         </label>
       </div>
+      <div class="checkbox">
+        <label>
+          <input type="checkbox" name="use_category" {% if shelf.use_category == 1 %}checked{% endif %}> {{_('Use category')}}
+        </label>
+      </div>
+      {% if shelf.use_category == 1 %}
+      <div class="form-group">
+        <label>
+        <select class="selectpicker" multiple>
+          {% for category in categories %}
+            <option value="{{ category.id }}"{% if category.id|string in selected %} selected{% endif %}>{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      </div>
+      <div class="form-group">
+        <input type="text" id="categories" name="categories" value="{{ shelf.categories if shelf.categories != '' }}"">
+        <ul id="sortTrue" class="list-group">
+          {% for category in selected %}
+            <li class="list-group-item" data-id="{{ category }}">{{ find(categories, category|int).name }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
     {% endif %}
     {% if kobo_sync_enabled and sync_only_selected_shelves %}
       <div class="checkbox">
@@ -29,3 +57,13 @@
   </form>
 </div>
 {% endblock %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='js/libs/bootstrap-select.min.js')}}"></script>
+{% if not current_user.locale == 'en' %}
+<script src="{{ url_for('static', filename='js/libs/bootstrap-select/defaults-' + current_user.locale + '.min.js') }}" charset="UTF-8"></script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/libs/Sortable.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/edit_shelf.js') }}"></script>
+{% endblock %}
+

@@ -29,6 +29,8 @@ from flask_login import current_user, login_required
 from sqlalchemy.exc import InvalidRequestError, OperationalError
 from sqlalchemy.sql.expression import func, true
 
+from cps.web import get_sort_function
+
 from . import calibre_db, config, db, logger, ub
 from .render_template import render_title_template
 from .usermanagement import login_required_if_no_ano
@@ -324,6 +326,7 @@ def create_edit_shelf(shelf, page_title, page, shelf_id=False):
             flash(_("Sorry you are not allowed to create a public shelf"), category="error")
             return redirect(url_for('web.index'))
         is_public = 1 if to_save.get("is_public") == "on" else 0
+        use_category = 1 if to_save.get("use_category") == "on" else 0
         if config.config_kobo_sync:
             shelf.kobo_sync = True if to_save.get("kobo_sync") else False
             if shelf.kobo_sync:
@@ -331,9 +334,12 @@ def create_edit_shelf(shelf, page_title, page, shelf_id=False):
                     ub.ShelfArchive.uuid == shelf.uuid).delete()
                 ub.session_commit()
         shelf_title = to_save.get("title", "")
+        categories = to_save.get("categories", "")
         if check_shelf_is_unique(shelf_title, is_public, shelf_id):
             shelf.name = shelf_title
             shelf.is_public = is_public
+            shelf.use_category = use_category
+            shelf.categories = categories
             if not shelf_id:
                 shelf.user_id = int(current_user.id)
                 ub.session.add(shelf)
@@ -356,13 +362,23 @@ def create_edit_shelf(shelf, page_title, page, shelf_id=False):
                 ub.session.rollback()
                 log.error_or_exception(ex)
                 flash(_("There was an error"), category="error")
+    entries = calibre_db.session.query(db.Tags)\
+        .order_by(db.Tags.name)
     return render_title_template('shelf_edit.html',
                                  shelf=shelf,
+                                 selected=shelf.categories.split(',') if shelf.categories != '' else [],
+                                 categories=entries,
                                  title=page_title,
                                  page=page,
+                                 find=find,
                                  kobo_sync_enabled=config.config_kobo_sync,
                                  sync_only_selected_shelves=sync_only_selected_shelves)
 
+
+def find(arr , id):
+    for x in arr:
+        if x.id == id:
+            return x
 
 def check_shelf_is_unique(title, is_public, shelf_id=False):
     if shelf_id:
@@ -467,8 +483,17 @@ def render_show_shelf(shelf_type, shelf_id, page_no, sort_param):
                 log.error_or_exception("Settings Database error: {}".format(e))
                 flash(_("Oops! Database Error: %(error)s.", error=e.orig), category="error")
 
+        selected = shelf.categories.split(',')
+
+        entries, __, pagination = calibre_db.fill_indexpage(page_no, pagesize,
+                                                           db.Books,
+                                                           db.Tags.id.in_(selected),
+                                                           [ub.BookShelf.order.asc()],
+                                                           True, config.config_read_column,
+                                                           ub.BookShelf, ub.BookShelf.book_id == db.Books.id)
+
         return render_title_template(page,
-                                     entries=result,
+                                     entries=result if shelf.use_category != 1 else entries,
                                      pagination=pagination,
                                      title=_("Shelf: '%(name)s'", name=shelf.name),
                                      shelf=shelf,
